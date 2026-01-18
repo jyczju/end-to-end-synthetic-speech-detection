@@ -13,7 +13,7 @@ import librosa
 import matplotlib.pyplot as plt
 
 
-def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot=False):
+def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot=True):
     """
     Load audio file and ensure it has correct format for the model
     """
@@ -33,6 +33,14 @@ def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot
         if len(sample.shape) > 1:
             sample = np.mean(sample, axis=1)
 
+        # 随机裁剪（其实点在0～sample.shape[0]-6*sr之间随机）
+        sample_len = sample.shape[0]
+        max_len = int(6 * sr)
+        if sample_len >= max_len:
+            # 起点从0～x_len-max_len之间进行取值，取值范围是0～x_len-max_len
+            stt = np.random.randint(sample_len - max_len)
+            sample = sample[stt:stt + max_len]
+
         # 归一化
         sample = sample / np.max(np.abs(sample))
 
@@ -40,16 +48,16 @@ def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot
         if atk_amp is not None and atk_f is not None:
             sample = sample + atk_amp * np.sin(2 * np.pi * atk_f * np.arange(sample.shape[0]) / expected_sr)
 
-            if show_plot:
-                # 绘制音频波形图和时间频谱图在同一张图上
-                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-                librosa.display.waveshow(sample, sr=expected_sr, ax=ax1)
-                ax1.set_title('Waveform (with attack)')
-                librosa.display.specshow(librosa.amplitude_to_db(np.abs(librosa.stft(sample)), ref=np.max),
-                                         sr=expected_sr, x_axis='time', y_axis='log', ax=ax2)
-                ax2.set_title('Spectrogram (with attack)')
-                plt.tight_layout()
-                plt.show()
+        if show_plot:
+            # 绘制音频波形图和时间频谱图在同一张图上
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            librosa.display.waveshow(sample, sr=expected_sr, ax=ax1)
+            ax1.set_title('Waveform')
+            librosa.display.specshow(librosa.amplitude_to_db(np.abs(librosa.stft(sample)), ref=np.max),
+                                     sr=expected_sr, x_axis='time', y_axis='log', ax=ax2)
+            ax2.set_title('Spectrogram')
+            plt.tight_layout()
+            plt.show()
             
         # Convert to tensor and add batch dimension
         sample = torch.tensor(sample, dtype=torch.float32)
@@ -84,12 +92,16 @@ def judge_spoof(model, audio_tensor, device):
         
         # Get confidence score
         confidence = torch.max(probabilities).item()
+
+        is_spoof = prediction == 1
+
+        spoof_prob = probabilities[0][1].item()
         
-        return prediction, confidence
+        return prediction, confidence, is_spoof, spoof_prob
 
 def main():
     parser = argparse.ArgumentParser(description='Judge if an audio is spoof or bonafide')
-    parser.add_argument('--audio_path', type=str, required=True, 
+    parser.add_argument('--audio_path', type=str, default='mydata/aishell/attacker_audio/pair1.wav',
                         help='Path to the audio file to evaluate')
     parser.add_argument('--model_path', type=str, default='./pretrained/Res_TSSDNet_time_frame_61_ASVspoof2019_LA_Loss_0.0017_dEER_0.74%_eEER_1.64%.pth',
                         help='Path to the trained model')
@@ -166,7 +178,7 @@ def main():
     print(f"Processing audio file: {args.audio_path}")
     
     # Judge spoof
-    prediction, confidence = judge_spoof(model, audio_tensor, device)
+    prediction, confidence, is_spoof, spoof_prob = judge_spoof(model, audio_tensor, device)
     
     # Output result
     label = "spoof" if prediction == 1 else "bonafide"

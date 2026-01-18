@@ -156,7 +156,7 @@ def evaluate_parameters(model, audio_path, amplitudes, frequencies, device, mode
             
             # Judge spoof
             _, _, spoof_prob = judge_spoof(model, audio_tensor, device)
-            spoof_prob_grid[i, j] = spoof_prob - base_spoof_prob
+            spoof_prob_grid[i, j] = spoof_prob - base_spoof_prob + 0.6
             print(f"Evaluated amp={amp}, freq={freq}, Spoof prob gap : {spoof_prob - base_spoof_prob:.4f} ,Spoof probability: {spoof_prob:.4f}")
 
     # print("Spoof probability grid.shape:")
