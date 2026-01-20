@@ -1,3 +1,5 @@
+import functools
+from typing import Tuple
 
 import torch
 import soundfile as sf
@@ -9,25 +11,37 @@ import librosa
 import matplotlib.pyplot as plt
 
 
+# 使用functools.lru_cache装饰器来缓存音频加载结果
+@functools.lru_cache(maxsize=2)  # 缓存最近2个音频文件
+def load_audio_cached(file_path: str, expected_sr: int = 16000) -> Tuple[np.ndarray, int]:
+    """
+    缓存版本的音频加载函数，避免重复加载相同文件
+    """
+    sample, sr = sf.read(file_path)
+
+    # 检查采样率
+    if sr != expected_sr:
+        print(f"Warning: Audio file {file_path} has sampling rate {sr}, expected {expected_sr}")
+        # 重采样
+        sample = librosa.resample(sample, orig_sr=sr, target_sr=expected_sr)
+        print('Resampled to {} Hz'.format(expected_sr))
+        sr = expected_sr
+
+    # 转换为单声道（如果立体声）
+    if len(sample.shape) > 1:
+        sample = np.mean(sample, axis=1)
+
+    return sample, sr
+
 def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot=True):
     """
     Load audio file and ensure it has correct format for the model
     """
     try:
-        # Load audio file
-        sample, sr = sf.read(file_path)
-        
-        # Check sampling rate
-        if sr != expected_sr:
-            print(f"Warning: Audio file {file_path} has sampling rate {sr}, expected {expected_sr}")
-            # Resample
-            sample = librosa.resample(sample, orig_sr=sr, target_sr=expected_sr)
-            print('Resampled to {} Hz'.format(expected_sr))
+        # 使用缓存版本加载音频
+        sample, sr = load_audio_cached(file_path, expected_sr)
 
-            
-        # Convert to mono if stereo
-        if len(sample.shape) > 1:
-            sample = np.mean(sample, axis=1)
+        print("Audio shape:", sample.shape)
 
         # 随机裁剪（其实点在0～sample.shape[0]-6*sr之间随机）
         sample_len = sample.shape[0]

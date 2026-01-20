@@ -13,7 +13,7 @@ from spoof_judge import load_audio, judge_spoof
 
 def main():
     parser = argparse.ArgumentParser(description='Judge if an audio is spoof or bonafide')
-    parser.add_argument('--audio_path', type=str, default='mydata/VoxCeleb1/target_audio/',
+    parser.add_argument('--audio_path', type=str, default='mydata/volunteer/orig_audio/',
                         help='Path to the audio file to evaluate')
     parser.add_argument('--model_path', type=str,
                         default='./pretrained/Res_TSSDNet_time_frame_61_ASVspoof2019_LA_Loss_0.0017_dEER_0.74%_eEER_1.64%.pth',
@@ -92,7 +92,7 @@ def main():
 
 
         # 循环100次，记录平均Spoof probability
-        for i in tqdm(range(100)):
+        for i in tqdm(range(143)):
             with redirect_stdout(open(os.devnull, 'w')):
                 # Load audio
                 if args.atk:
@@ -103,7 +103,6 @@ def main():
                 if audio_tensor is None:
                     print("Error loading audio file")
                     continue
-
                 # Judge spoof
                 prediction, confidence, is_spoof, spoof_prob = judge_spoof(model, audio_tensor, device)
                 spoof_probs.append(spoof_prob)
