@@ -1,7 +1,3 @@
-"""
-python spoof_judge.py --atk_amp 0.2 --atk_f 2500.0 --audio_path ./mydata/test.wav
-
-"""
 
 import torch
 import soundfile as sf
