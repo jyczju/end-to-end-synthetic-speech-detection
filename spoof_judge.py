@@ -41,7 +41,7 @@ def load_audio(file_path, expected_sr=16000, atk_amp=None, atk_f=None, show_plot
         # 使用缓存版本加载音频
         sample, sr = load_audio_cached(file_path, expected_sr)
 
-        print("Audio shape:", sample.shape)
+        # print("Audio shape:", sample.shape)
 
         # 随机裁剪（其实点在0～sample.shape[0]-6*sr之间随机）
         sample_len = sample.shape[0]
@@ -95,7 +95,7 @@ def judge_spoof(model, audio_tensor, device):
         
         # Apply softmax to get probabilities
         probabilities = torch.softmax(output, dim=1)
-        print("probabilities[bonafide, spoofed]:",probabilities)
+        # print("probabilities[bonafide, spoofed]:",probabilities)
         
         # Get prediction (0 = bonafide, 1 = spoof)
         prediction = torch.argmax(probabilities, dim=1).item()
